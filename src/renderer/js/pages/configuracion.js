@@ -44,19 +44,27 @@ Pages.alumnos = async function() {
       `%${busqueda}%`, `%${busqueda}%`
     );
     document.getElementById('tabla-alumnos').innerHTML = UI.buildTable(
-      ['Nombre', 'DNI', 'Carrera(s)', 'Teléfono', ''],
+      ['Nombre', 'DNI', 'Carrera(s)', 'Teléfono', 'Estado', ''],
       lista.map(a => `
-        <tr>
+        <tr ${a.bloqueado_prestamo ? 'style="background:rgba(239,68,68,0.05);"' : ''}>
           <td class="fw-600">${a.apellido}, ${a.nombre}</td>
           <td class="td-muted">${a.dni || '—'}</td>
           <td>${a.carrera
             ? a.carrera.split(',').map(s => `<span class="badge badge-gray" style="margin:1px;">${s.trim()}</span>`).join(' ')
             : '—'}</td>
           <td class="td-muted">${a.telefono || '—'}</td>
+          <td>
+            ${a.bloqueado_prestamo
+              ? `<span class="badge badge-red" title="Bloqueado hasta ${a.bloqueado_hasta}">⛔ Bloqueado</span>`
+              : a.incumplimientos_count > 0
+                ? `<span class="badge badge-yellow">⚠ ${a.incumplimientos_count} incump.</span>`
+                : '<span class="badge badge-green" style="opacity:0.5;">OK</span>'}
+          </td>
           <td style="display:flex;gap:6px;">
             ${App.esAdmin() ? `
               <button class="btn btn-sm btn-secondary" onclick="Pages._editAlumno(${a.id})">✎</button>
               <button class="btn btn-sm btn-danger btn-icon" onclick="Pages._deleteAlumno(${a.id}, '${a.nombre} ${a.apellido}')">✕</button>
+              ${a.bloqueado_prestamo ? `<button class="btn btn-sm btn-secondary" onclick="Pages._desbloquearAlumno(${a.id}, '${a.nombre} ${a.apellido}')" title="Desbloquear préstamos">🔓</button>` : ''}
             ` : ''}
           </td>
         </tr>
@@ -152,6 +160,13 @@ Pages.alumnos = async function() {
     UI.confirm('Eliminar alumno', `¿Eliminar a ${nombre}?`, async () => {
       await DB.run(`UPDATE alumnos SET activo=0 WHERE id=?`, id);
       UI.toast('Alumno eliminado', 'info');
+      recargar();
+    });
+  };
+  Pages._desbloquearAlumno = (id, nombre) => {
+    UI.confirm('Desbloquear alumno', `¿Desbloquear préstamos para ${nombre}? Esta acción es manual y queda registrada.`, async () => {
+      await DB.run(`UPDATE alumnos SET bloqueado_prestamo=0, bloqueado_hasta=NULL WHERE id=?`, id);
+      UI.toast(`${nombre} desbloqueado`, 'success');
       recargar();
     });
   };

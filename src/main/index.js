@@ -152,6 +152,15 @@ async function setupDatabase() {
       nombre TEXT NOT NULL UNIQUE,
       siglas TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS incumplimientos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      alumno_id INTEGER NOT NULL REFERENCES alumnos(id),
+      prestamo_id INTEGER REFERENCES prestamos(id),
+      fecha TEXT NOT NULL,
+      cuatrimestre TEXT NOT NULL,
+      notas TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
   `);
 
   // Migrations
@@ -160,6 +169,9 @@ async function setupDatabase() {
   try { db.run("ALTER TABLE turno_personal ADD COLUMN estado TEXT NOT NULL DEFAULT 'presente'"); } catch(e) {}
   try { db.run("ALTER TABLE agenda ADD COLUMN estado_p1 TEXT DEFAULT 'programado'"); } catch(e) {}
   try { db.run("ALTER TABLE agenda ADD COLUMN estado_p2 TEXT DEFAULT 'programado'"); } catch(e) {}
+  try { db.run("ALTER TABLE alumnos ADD COLUMN incumplimientos_count INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.run("ALTER TABLE alumnos ADD COLUMN bloqueado_prestamo INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.run("ALTER TABLE alumnos ADD COLUMN bloqueado_hasta TEXT"); } catch(e) {}
 
   saveDb();
 }

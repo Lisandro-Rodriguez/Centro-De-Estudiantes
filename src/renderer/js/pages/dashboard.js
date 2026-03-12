@@ -3,6 +3,8 @@ Pages = window.Pages || {};
 
 Pages.dashboard = async function() {
   const container = document.getElementById('page-container');
+  // Detectar préstamos vencidos al abrir dashboard
+  await Morosos.detectarVencidos();
   container.innerHTML = `<div style="color:var(--text-muted);padding:40px;text-align:center;">Cargando...</div>`;
 
   const today = UI.today();
@@ -46,6 +48,17 @@ Pages.dashboard = async function() {
   `, today);
 
   container.innerHTML = `
+    ${nMorosos > 0 ? `
+    <div style="background:rgba(239,68,68,0.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span style="color:var(--red);font-size:16px;">⚠</span>
+      <div>
+        <span style="font-size:13px;color:var(--red);font-weight:600;">${nMorosos} préstamo${nMorosos>1?'s':''} vencido${nMorosos>1?'s':''} sin devolver</span>
+        <div style="font-size:11px;color:var(--red);opacity:0.8;">
+          ${morososData.slice(0,3).map(m=>`${m.nombre} ${m.apellido} — ${m.material_nombre||'?'}`).join(' · ')}${nMorosos>3?` · y ${nMorosos-3} más`:''}
+        </div>
+      </div>
+      <button class="btn btn-sm" style="margin-left:auto;border-color:var(--red);color:var(--red);" onclick="Router.navigate('prestamos')">Ver préstamos</button>
+    </div>` : ''}
     ${UI.turnoActivoBanner()}
     <div class="page-header">
       <div>
