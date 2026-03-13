@@ -23,4 +23,6 @@ contextBridge.exposeInMainWorld('api', {
   onUpdateAvailable: (cb) => ipcRenderer.on('update:available', (_, info) => cb(info)),
   onUpdateDownloaded: (cb) => ipcRenderer.on('update:downloaded', (_, info) => cb(info)),
   installUpdate: () => ipcRenderer.send('update:install'),
+  exportPdf:   (opts) => ipcRenderer.invoke('pdf:export', opts),
+  exportExcel: (opts) => ipcRenderer.invoke('excel:export', opts),
 });

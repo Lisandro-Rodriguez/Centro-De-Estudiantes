@@ -581,3 +581,112 @@ tbody td {
 .fw-600 { font-weight: 600; }
 .fs-12 { font-size: 12px; }
 .fs-13 { font-size: 13px; }
+
+/* ─── Temas ───────────────────────────────────────────────────────────────── */
+
+/* Claro */
+[data-theme="claro"] {
+  --bg-base:      #f0f2f7;
+  --bg-surface:   #ffffff;
+  --bg-elevated:  #f8f9fc;
+  --bg-hover:     #eef0f6;
+  --border:       #d0d5e8;
+  --border-light: #e4e8f2;
+  --accent:       #2563eb;
+  --accent-dim:   #dbeafe;
+  --accent-glow:  rgba(37,99,235,0.08);
+  --green:        #16a34a;
+  --green-dim:    rgba(22,163,74,0.1);
+  --yellow:       #d97706;
+  --yellow-dim:   rgba(217,119,6,0.1);
+  --red:          #dc2626;
+  --red-dim:      rgba(220,38,38,0.1);
+  --purple:       #7c3aed;
+  --text-primary:   #111827;
+  --text-secondary: #4b5563;
+  --text-muted:     #9ca3af;
+}
+[data-theme="claro"] input,
+[data-theme="claro"] select,
+[data-theme="claro"] textarea {
+  background: #fff;
+  color: #111827;
+  border-color: #d0d5e8;
+}
+[data-theme="claro"] select option { background: #fff; color: #111827; }
+
+/* Azul universitario */
+[data-theme="azul"] {
+  --bg-base:      #0a1628;
+  --bg-surface:   #0f2040;
+  --bg-elevated:  #162a52;
+  --bg-hover:     #1e3668;
+  --border:       #1e3668;
+  --border-light: #162a52;
+  --accent:       #60a5fa;
+  --accent-dim:   #1e3a6e;
+  --accent-glow:  rgba(96,165,250,0.15);
+  --green:        #34d399;
+  --green-dim:    rgba(52,211,153,0.12);
+  --yellow:       #fbbf24;
+  --yellow-dim:   rgba(251,191,36,0.12);
+  --red:          #f87171;
+  --red-dim:      rgba(248,113,113,0.12);
+  --purple:       #a78bfa;
+  --text-primary:   #e0eaff;
+  --text-secondary: #7fa8d4;
+  --text-muted:     #3a5a8a;
+}
+
+/* Violeta noche */
+[data-theme="violeta"] {
+  --bg-base:      #0e0a1a;
+  --bg-surface:   #150f28;
+  --bg-elevated:  #1e1538;
+  --bg-hover:     #271c4a;
+  --border:       #2d2050;
+  --border-light: #1e1538;
+  --accent:       #a78bfa;
+  --accent-dim:   #2e1f6e;
+  --accent-glow:  rgba(167,139,250,0.15);
+  --green:        #4ade80;
+  --green-dim:    rgba(74,222,128,0.12);
+  --yellow:       #facc15;
+  --yellow-dim:   rgba(250,204,21,0.12);
+  --red:          #f87171;
+  --red-dim:      rgba(248,113,113,0.12);
+  --purple:       #e879f9;
+  --text-primary:   #ede9fe;
+  --text-secondary: #9d8ec4;
+  --text-muted:     #4a3a70;
+}
+
+/* Verde mate */
+[data-theme="verde"] {
+  --bg-base:      #0a1410;
+  --bg-surface:   #0f1e18;
+  --bg-elevated:  #162a20;
+  --bg-hover:     #1e3828;
+  --border:       #1e3828;
+  --border-light: #162a20;
+  --accent:       #4ade80;
+  --accent-dim:   #14532d;
+  --accent-glow:  rgba(74,222,128,0.15);
+  --green:        #86efac;
+  --green-dim:    rgba(134,239,172,0.12);
+  --yellow:       #fde047;
+  --yellow-dim:   rgba(253,224,71,0.12);
+  --red:          #f87171;
+  --red-dim:      rgba(248,113,113,0.12);
+  --purple:       #c084fc;
+  --text-primary:   #dcfce7;
+  --text-secondary: #6ea882;
+  --text-muted:     #2e5a3a;
+}
+
+/* ─── Sidebar logo con imagen ─────────────────────────────────────────────── */
+.sidebar-logo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: calc(var(--radius) - 1px);
+}

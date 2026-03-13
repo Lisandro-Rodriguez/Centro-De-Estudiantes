@@ -190,8 +190,8 @@ Pages.personal = async function() {
           <td class="td-muted">${p.dni || '—'}</td>
           <td class="td-muted">${p.telefono || '—'}</td>
           <td style="display:flex;gap:6px;">
-            <button class="btn btn-sm btn-secondary" onclick="Pages._editPersonal(${p.id})">✎</button>
-            <button class="btn btn-sm btn-danger btn-icon" onclick="Pages._deletePersonal(${p.id},'${p.nombre} ${p.apellido}')">✕</button>
+            <button class="btn btn-sm btn-secondary" onclick="App.pedirPinAdmin(()=>Pages._editPersonal(${p.id}))">✎</button>
+            <button class="btn btn-sm btn-danger btn-icon" onclick="App.pedirPinAdmin(()=>Pages._deletePersonal(${p.id},'${p.nombre} ${p.apellido}'))">✕</button>
           </td>
         </tr>
       `),
@@ -205,7 +205,7 @@ Pages.personal = async function() {
         <h1 class="page-title">Personal</h1>
         <div class="page-subtitle">Becarios y miembros del centro</div>
       </div>
-      <button class="btn btn-primary" onclick="Pages._formPersonal()">+ Nuevo</button>
+      <button class="btn btn-primary" onclick="App.pedirPinAdmin(Pages._formPersonal)">+ Nuevo</button>
     </div>
     <div id="tabla-personal"></div>
   `;
@@ -311,8 +311,8 @@ Pages.materiales = async function() {
           </td>
           <td style="display:flex;gap:6px;">
             ${App.esAdmin() ? `
-              <button class="btn btn-sm btn-secondary" onclick="Pages._editMat(${m.id})">✎</button>
-              <button class="btn btn-sm btn-danger btn-icon" onclick="Pages._deleteMat(${m.id},'${m.nombre}')">✕</button>
+              <button class="btn btn-sm btn-secondary" onclick="App.pedirPinAdmin(()=>Pages._editMat(${m.id}))">✎</button>
+              <button class="btn btn-sm btn-danger btn-icon" onclick="App.pedirPinAdmin(()=>Pages._deleteMat(${m.id},'${m.nombre}'))">✕</button>
             ` : ''}
           </td>
         </tr>
@@ -327,7 +327,7 @@ Pages.materiales = async function() {
         <h1 class="page-title">Materiales</h1>
         <div class="page-subtitle">Inventario de materiales para préstamo</div>
       </div>
-      ${App.esAdmin() ? '<button class="btn btn-primary" onclick="Pages._formMat()">+ Nuevo material</button>' : ''}
+      ${App.esAdmin() ? '<button class="btn btn-primary" onclick="App.pedirPinAdmin(Pages._formMat)">+ Nuevo material</button>' : ''}
     </div>
     <div id="tabla-mat"></div>
   `;
@@ -401,6 +401,14 @@ Pages.materiales = async function() {
 
 // ─── Configuración ────────────────────────────────────────────────────────────
 Pages.configuracion = async function() {
+  // Requiere PIN admin
+  if (!App._pinConfirmado) {
+    App.pedirPinAdmin(() => {
+      App._pinConfirmado = true;
+      Router.navigate('configuracion');
+    });
+    return;
+  }
   const container = document.getElementById('page-container');
 
   const conf = {
@@ -440,6 +448,10 @@ Pages.configuracion = async function() {
           <div class="form-group">
             <label>Nombre del centro</label>
             <input type="text" id="cf-nombre" value="${conf.nombre_centro || ''}" />
+          </div>
+          <div class="form-group">
+            <label>PIN administrador</label>
+            <input type="password" id="cf-pin" value="${await window.api.getConfig('pin_admin') || '1234'}" maxlength="8" style="letter-spacing:4px;font-family:var(--font-mono);" />
           </div>
         </div>
 
@@ -506,12 +518,14 @@ Pages.configuracion = async function() {
       hojas_gratis:  document.getElementById('cf-hgratis').value,
       hojas_max:     document.getElementById('cf-hmax').value,
       precio_hoja:   document.getElementById('cf-precio').value,
+      pin_admin:     document.getElementById('cf-pin').value || '1234',
     };
     for (const [k, v] of Object.entries(updates)) {
       await window.api.setConfig(k, v);
       App.config[k] = v;
     }
     document.getElementById('titlebar-name').textContent = updates.nombre_centro || 'Centro de Estudiantes';
+    App.config.pin_admin = updates.pin_admin;
     UI.toast('Configuración guardada', 'success');
   };
 

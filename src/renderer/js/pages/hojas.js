@@ -57,7 +57,7 @@ Pages.hojas = async function() {
     ${UI.turnoActivoBanner()}
     <div class="page-header">
       <div>
-        <h1 class="page-title">Hojas</h1>
+        <h1 class="page-title">Fotocopias</h1>
         <div class="page-subtitle">${hojasGratis} gratis · hasta ${hojasMax} pagas${precioHoja > 0 ? ` · $${precioHoja} c/u` : ''}</div>
       </div>
     </div>

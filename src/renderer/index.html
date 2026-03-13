@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
   <title>Centro de Estudiantes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
+
+  <!-- Login overlay -->
+  <div id="login-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);"></div>
+
   <div class="titlebar" id="titlebar">
     <div class="titlebar-drag"></div>
     <div class="titlebar-title">
@@ -17,9 +21,9 @@
       <span id="titlebar-name">Centro de Estudiantes</span>
     </div>
     <div class="titlebar-controls">
-      <button class="tb-btn" id="btn-min" title="Minimizar">─</button>
-      <button class="tb-btn" id="btn-max" title="Maximizar">□</button>
-      <button class="tb-btn danger" id="btn-close" title="Cerrar">✕</button>
+      <button class="tb-btn" id="btn-min">─</button>
+      <button class="tb-btn" id="btn-max">□</button>
+      <button class="tb-btn danger" id="btn-close">✕</button>
     </div>
   </div>
 
@@ -29,28 +33,41 @@
   </div>
 
   <div class="app-layout">
-    <nav class="sidebar" id="sidebar">
+    <nav class="sidebar" id="sidebar" style="display:flex;flex-direction:column;">
+
       <div class="sidebar-header">
-        <div class="sidebar-logo">◈</div>
-        <div>
-          <div class="sidebar-label">CE</div>
-          <span id="rol-badge" class="badge" style="display:none;margin-top:4px;font-size:10px;"></span>
+        <!-- Logo/ícono clickeable para abrir apariencia -->
+        <div class="sidebar-logo" id="sidebar-logo-content" onclick="Temas.mostrarPanel()" title="Cambiar apariencia" style="cursor:pointer;font-size:16px;color:var(--accent);">◈</div>
+        <div style="flex:1;min-width:0;">
+          <div class="sidebar-label" id="sidebar-centro-nombre">CE</div>
+          <span id="rol-badge" class="badge" style="display:none;font-size:10px;"></span>
         </div>
+        <!-- Botón de tema rápido -->
+        <button onclick="Temas.mostrarPanel()" title="Apariencia"
+          style="background:transparent;border:1px solid var(--border-light);border-radius:var(--radius);padding:4px 6px;color:var(--text-muted);font-size:13px;cursor:pointer;flex-shrink:0;"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="this.style.borderColor='var(--border-light)';this.style.color='var(--text-muted)'">🎨</button>
       </div>
-      <ul class="nav-list">
-        <li class="nav-item active" data-page="dashboard"><span class="nav-icon">⊞</span><span class="nav-text">Dashboard</span></li>
-        <li class="nav-item" data-page="turno"><span class="nav-icon">◷</span><span class="nav-text">Turno Actual</span></li>
-        <li class="nav-item" data-page="agenda"><span class="nav-icon">▦</span><span class="nav-text">Agenda</span></li>
-        <li class="nav-item" data-page="prestamos"><span class="nav-icon">⊡</span><span class="nav-text">Préstamos</span></li>
-        <li class="nav-item" data-page="pan"><span class="nav-icon">◻</span><span class="nav-text">Pan / Merienda</span></li>
-        <li class="nav-item" data-page="hojas"><span class="nav-icon">◫</span><span class="nav-text">Hojas</span></li>
+
+      <ul class="nav-list" style="flex:1;">
+        <li class="nav-item active" data-page="dashboard">  <span class="nav-icon">🏠</span><span class="nav-text">Inicio</span></li>
+        <li class="nav-item" data-page="turno">             <span class="nav-icon">🕐</span><span class="nav-text">Turno Actual</span></li>
+        <li class="nav-item" data-page="agenda">            <span class="nav-icon">📅</span><span class="nav-text">Agenda</span></li>
+        <li class="nav-item" data-page="prestamos">         <span class="nav-icon">📦</span><span class="nav-text">Préstamos</span></li>
+        <li class="nav-item" data-page="pan">               <span class="nav-icon">🥐</span><span class="nav-text">Desayuno / Merienda</span></li>
+        <li class="nav-item" data-page="hojas">             <span class="nav-icon">📄</span><span class="nav-text">Fotocopias</span></li>
         <li class="nav-divider"></li>
-        <li class="nav-item" data-page="alumnos"><span class="nav-icon">◉</span><span class="nav-text">Alumnos</span></li>
-        <li class="nav-item" data-page="personal"><span class="nav-icon">◎</span><span class="nav-text">Personal</span></li>
-        <li class="nav-item" data-page="materiales"><span class="nav-icon">⊟</span><span class="nav-text">Materiales</span></li>
+        <li class="nav-item" data-page="alumnos">           <span class="nav-icon">🎓</span><span class="nav-text">Alumnos</span></li>
+        <li class="nav-item" data-page="personal">          <span class="nav-icon">👥</span><span class="nav-text">Personal</span></li>
+        <li class="nav-item" data-page="materiales">        <span class="nav-icon">🎒</span><span class="nav-text">Materiales</span></li>
+        <li class="nav-item" data-page="mercaderia">        <span class="nav-icon">🧉</span><span class="nav-text">Mercadería</span></li>
         <li class="nav-divider"></li>
-        <li class="nav-item" data-page="configuracion"><span class="nav-icon">◈</span><span class="nav-text">Configuración</span></li>
+        <li class="nav-item" data-page="informes">          <span class="nav-icon">📊</span><span class="nav-text">Informes</span></li>
+        <li class="nav-item" data-page="configuracion">     <span class="nav-icon">⚙️</span><span class="nav-text">Configuración</span></li>
       </ul>
+
+      <!-- Usuario activo -->
+      <div id="sidebar-user-info"></div>
     </nav>
 
     <main class="main-content" id="main-content">
@@ -72,7 +89,11 @@
   <script src="js/pages/pan.js"></script>
   <script src="js/pages/hojas.js"></script>
   <script src="js/pages/configuracion.js"></script>
+  <script src="js/pages/mercaderia.js"></script>
+  <script src="js/pages/informes.js"></script>
+  <script src="js/inventario.js"></script>
   <script src="js/morosos.js"></script>
+  <script src="js/temas.js"></script>
   <script src="js/router.js"></script>
   <script src="js/app.js"></script>
 </body>

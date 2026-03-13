@@ -8,9 +8,11 @@ Pages.turno = async function() {
   if (turno) {
     // ── Turno en curso ──
     const turnoPersonal = await DB.query(`
-      SELECT tp.*, p.nombre, p.apellido, p.rol
+      SELECT tp.*, p.nombre, p.apellido, p.rol,
+             pc.nombre as cubierto_por_nombre, pc.apellido as cubierto_por_apellido
       FROM turno_personal tp
       JOIN personal p ON p.id = tp.personal_id
+      LEFT JOIN personal pc ON pc.id = tp.cubierto_por_id
       WHERE tp.turno_id = ?
     `, turno.id);
 
@@ -51,7 +53,7 @@ Pages.turno = async function() {
               </div>
               <div style="flex:1;">
                 <div style="font-weight:500;font-size:13px;">${tp.nombre} ${tp.apellido}</div>
-                <div style="font-size:12px;color:var(--text-muted);">${tp.rol} · Entrada: ${UI.formatTime(tp.hora_entrada) || '—'}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${tp.rol} · Entrada: ${UI.formatTime(tp.hora_entrada) || '—'}${tp.cubierto_por_nombre ? ` · Cubierto por: <strong>${tp.cubierto_por_nombre} ${tp.cubierto_por_apellido}</strong>` : ''}</div>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
                 ${estadoBadge(tp.estado)}
@@ -128,7 +130,7 @@ Pages.turno = async function() {
         nuevoEstado, turnoPersonalId
       );
       // Recalcular rol activo (si alguien era presidente y ahora está ausente, puede cambiar)
-      await App.refreshRol();
+      await App.refreshTurno();
       UI.toast('Estado actualizado', 'success');
       Pages.turno(); // rerender
     };
@@ -139,9 +141,9 @@ Pages.turno = async function() {
         const res = await window.api.cerrarTurno({ turnoId: turno.id, hora_fin });
         if (res.ok) {
           App.setTurnoActivo(null);
-          await App.refreshRol();
+          await App.refreshTurno();  // esto ya incluye checkTurnoActivo que limpia el turno
           UI.toast('Turno cerrado correctamente', 'success');
-          Pages.turno(); // rerender sin turno activo
+          Router.navigate('dashboard'); // volver al dashboard limpio
         } else {
           UI.toast('Error al cerrar turno', 'error');
         }
@@ -183,11 +185,18 @@ Pages.turno = async function() {
             </div>
             <div class="form-group">
               <label>Estado de asistencia</label>
-              <select id="t-p1-estado">
+              <select id="t-p1-estado" onchange="Pages._toggleCubierto('p1', this.value)">
                 <option value="presente">Presente</option>
                 <option value="demorado">Demorado</option>
                 <option value="cubierto">Cubierto por otro</option>
                 <option value="ausente">Ausente</option>
+              </select>
+            </div>
+            <div class="form-group" id="p1-cubierto-por" style="display:none;grid-column:span 2;">
+              <label>¿Quién lo cubre?</label>
+              <select id="t-p1-cubierto-por">
+                <option value="">— Seleccionar —</option>
+                ${personalList.map(p=>`<option value="${p.id}">${p.apellido}, ${p.nombre} (${p.rol})</option>`).join('')}
               </select>
             </div>
           </div>
@@ -205,11 +214,18 @@ Pages.turno = async function() {
             </div>
             <div class="form-group">
               <label>Estado de asistencia</label>
-              <select id="t-p2-estado">
+              <select id="t-p2-estado" onchange="Pages._toggleCubierto('p2', this.value)">
                 <option value="presente">Presente</option>
                 <option value="demorado">Demorado</option>
                 <option value="cubierto">Cubierto por otro</option>
                 <option value="ausente">Ausente</option>
+              </select>
+            </div>
+            <div class="form-group" id="p2-cubierto-por" style="display:none;grid-column:span 2;">
+              <label>¿Quién lo cubre?</label>
+              <select id="t-p2-cubierto-por">
+                <option value="">— Seleccionar —</option>
+                ${personalList.map(p=>`<option value="${p.id}">${p.apellido}, ${p.nombre} (${p.rol})</option>`).join('')}
               </select>
             </div>
           </div>
@@ -261,27 +277,34 @@ Pages.turno = async function() {
       const hora_ini = document.getElementById('t-hora').value;
       const p1       = document.getElementById('t-p1').value;
       const p1estado = document.getElementById('t-p1-estado').value;
+      const p1cubPor = document.getElementById('t-p1-cubierto-por')?.value || null;
       const p2       = document.getElementById('t-p2').value;
       const p2estado = document.getElementById('t-p2-estado').value;
+      const p2cubPor = document.getElementById('t-p2-cubierto-por')?.value || null;
       const notas    = document.getElementById('t-notas').value;
 
       if (!p1) { UI.toast('Seleccioná al menos una persona', 'error'); return; }
       if (p1 && p2 && p1 === p2) { UI.toast('No podés seleccionar la misma persona dos veces', 'error'); return; }
 
       const personal = [
-        p1 ? { id: Number(p1), estado: p1estado } : null,
-        p2 ? { id: Number(p2), estado: p2estado } : null,
+        p1 ? { id: Number(p1), estado: p1estado, cubierto_por_id: p1estado === 'cubierto' && p1cubPor ? Number(p1cubPor) : null } : null,
+        p2 ? { id: Number(p2), estado: p2estado, cubierto_por_id: p2estado === 'cubierto' && p2cubPor ? Number(p2cubPor) : null } : null,
       ].filter(Boolean);
 
       const res = await window.api.iniciarTurno({ fecha, hora_inicio: hora_ini, personal, notas });
 
       if (res.ok) {
-        await App.refreshRol();
+        await App.refreshTurno();
         UI.toast('Turno iniciado', 'success');
         Pages.turno();
       } else {
         UI.toast('Error al iniciar turno: ' + (res.error || ''), 'error');
       }
+    };
+
+    Pages._toggleCubierto = (prefix, estado) => {
+      const div = document.getElementById(`${prefix}-cubierto-por`);
+      if (div) div.style.display = estado === 'cubierto' ? 'block' : 'none';
     };
   }
 };

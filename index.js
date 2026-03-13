@@ -59,7 +59,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(app.getAppPath(), 'src/renderer/index.html'));
-  mainWindow.once('ready-to-show', () => {
+    mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     if (isDev) mainWindow.webContents.openDevTools();
   });
@@ -101,16 +101,13 @@ async function setupDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       turno_id INTEGER NOT NULL REFERENCES turnos(id) ON DELETE CASCADE,
       personal_id INTEGER NOT NULL REFERENCES personal(id),
-      hora_entrada TEXT, hora_salida TEXT, horas_cumplidas REAL DEFAULT 0,
-      estado TEXT NOT NULL DEFAULT 'presente' CHECK(estado IN ('presente','demorado','cubierto','ausente'))
+      hora_entrada TEXT, hora_salida TEXT, horas_cumplidas REAL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS agenda (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fecha TEXT NOT NULL, hora_inicio TEXT NOT NULL, hora_fin TEXT NOT NULL,
       personal_id INTEGER REFERENCES personal(id),
       personal_id2 INTEGER REFERENCES personal(id),
-      estado_p1 TEXT DEFAULT 'programado' CHECK(estado_p1 IN ('programado','presente','demorado','cubierto','ausente')),
-      estado_p2 TEXT DEFAULT 'programado' CHECK(estado_p2 IN ('programado','presente','demorado','cubierto','ausente')),
       notas TEXT, estado TEXT DEFAULT 'programado'
     );
     CREATE TABLE IF NOT EXISTS materiales (
@@ -147,52 +144,7 @@ async function setupDatabase() {
     INSERT OR IGNORE INTO configuracion VALUES ('hojas_max','7');
     INSERT OR IGNORE INTO configuracion VALUES ('precio_hoja','0');
     INSERT OR IGNORE INTO configuracion VALUES ('nombre_centro','Centro de Estudiantes');
-    INSERT OR IGNORE INTO configuracion VALUES ('pin_admin','1234');
-    CREATE TABLE IF NOT EXISTS carreras (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL UNIQUE,
-      siglas TEXT NOT NULL DEFAULT ''
-    );
-    CREATE TABLE IF NOT EXISTS mercaderia (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      unidad TEXT NOT NULL DEFAULT 'unidad',
-      stock_actual REAL DEFAULT 0,
-      stock_minimo REAL DEFAULT 1,
-      descripcion TEXT,
-      activo INTEGER DEFAULT 1,
-      updated_at TEXT DEFAULT (datetime('now','localtime'))
-    );
-    CREATE TABLE IF NOT EXISTS mercaderia_movimientos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      mercaderia_id INTEGER NOT NULL REFERENCES mercaderia(id),
-      tipo TEXT NOT NULL CHECK(tipo IN ('entrada','salida')),
-      cantidad REAL NOT NULL,
-      motivo TEXT,
-      turno_id INTEGER REFERENCES turnos(id),
-      created_at TEXT DEFAULT (datetime('now','localtime'))
-    );
-    CREATE TABLE IF NOT EXISTS incumplimientos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      alumno_id INTEGER NOT NULL REFERENCES alumnos(id),
-      prestamo_id INTEGER REFERENCES prestamos(id),
-      fecha TEXT NOT NULL,
-      cuatrimestre TEXT NOT NULL,
-      notas TEXT,
-      created_at TEXT DEFAULT (datetime('now','localtime'))
-    );
   `);
-
-  // Migrations
-  try { db.run("ALTER TABLE personal ADD COLUMN carrera TEXT"); } catch(e) {}
-  try { db.run("ALTER TABLE carreras ADD COLUMN siglas TEXT NOT NULL DEFAULT ''"); } catch(e) {}
-  try { db.run("ALTER TABLE turno_personal ADD COLUMN estado TEXT NOT NULL DEFAULT 'presente'"); } catch(e) {}
-  try { db.run("ALTER TABLE agenda ADD COLUMN estado_p1 TEXT DEFAULT 'programado'"); } catch(e) {}
-  try { db.run("ALTER TABLE agenda ADD COLUMN estado_p2 TEXT DEFAULT 'programado'"); } catch(e) {}
-  try { db.run("ALTER TABLE alumnos ADD COLUMN incumplimientos_count INTEGER DEFAULT 0"); } catch(e) {}
-  try { db.run("ALTER TABLE alumnos ADD COLUMN bloqueado_prestamo INTEGER DEFAULT 0"); } catch(e) {}
-  try { db.run("ALTER TABLE alumnos ADD COLUMN bloqueado_hasta TEXT"); } catch(e) {}
-  try { db.run("ALTER TABLE turno_personal ADD COLUMN cubierto_por_id INTEGER"); } catch(e) {}
 
   saveDb();
 }
@@ -237,17 +189,12 @@ ipcMain.handle('db:query', (_, { sql, params = [] }) => sqlAll(sql, params));
 ipcMain.handle('db:run',   (_, { sql, params = [] }) => sqlRun(sql, params));
 ipcMain.handle('db:get',   (_, { sql, params = [] }) => sqlGet(sql, params));
 
-ipcMain.handle('turno:iniciar', (_, { fecha, hora_inicio, personal, notas }) => {
+ipcMain.handle('turno:iniciar', (_, { fecha, hora_inicio, personal_ids, notas }) => {
   try {
     db.run(`INSERT INTO turnos (fecha,hora_inicio,notas) VALUES (?,?,?)`, [fecha, hora_inicio, notas || '']);
     const turnoId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-    // personal is array of {id, estado}
-    for (const p of personal) {
-      const horaEntrada = (p.estado === 'demorado' || p.estado === 'ausente') ? null : hora_inicio;
-      db.run(
-        `INSERT INTO turno_personal (turno_id,personal_id,hora_entrada,estado,cubierto_por_id) VALUES (?,?,?,?,?)`,
-        [turnoId, p.id, horaEntrada, p.estado || 'presente', p.cubierto_por_id || null]
-      );
+    for (const pid of personal_ids) {
+      db.run(`INSERT INTO turno_personal (turno_id,personal_id,hora_entrada) VALUES (?,?,?)`, [turnoId, pid, hora_inicio]);
     }
     saveDb();
     return { ok: true, turnoId };
@@ -260,13 +207,12 @@ ipcMain.handle('turno:cerrar', (_, { turnoId, hora_fin }) => {
     const turno = sqlGet(`SELECT * FROM turnos WHERE id=?`, [turnoId]).data;
     const personal = sqlAll(`SELECT * FROM turno_personal WHERE turno_id=?`, [turnoId]).data;
     for (const tp of personal) {
-      // Ausentes no acumulan horas
-      if (tp.estado === 'ausente') continue;
       const entrada = tp.hora_entrada || turno.hora_inicio;
       const [hE, mE] = String(entrada).split(':').map(Number);
       const [hS, mS] = hora_fin.split(':').map(Number);
       const horas = Math.max(0, ((hS * 60 + mS) - (hE * 60 + mE)) / 60);
       db.run(`UPDATE turno_personal SET hora_salida=?,horas_cumplidas=? WHERE id=?`, [hora_fin, horas, tp.id]);
+      db.run(`UPDATE personal SET horas_requeridas=horas_requeridas-? WHERE id=?`, [horas, tp.personal_id]);
     }
     saveDb();
     return { ok: true };
@@ -280,62 +226,6 @@ ipcMain.handle('config:get', (_, key) => {
 ipcMain.handle('config:set', (_, { key, value }) => {
   sqlRun(`INSERT OR REPLACE INTO configuracion (clave,valor) VALUES (?,?)`, [key, value]);
   return { ok: true };
-});
-
-// ─── PDF Export ───────────────────────────────────────────────────────────────
-ipcMain.handle('pdf:export', async (_, { html, filename }) => {
-  try {
-    const { BrowserWindow, dialog } = require('electron');
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: filename,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    });
-    if (!filePath) return { ok: false, cancelled: true };
-
-    const win = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false, contextIsolation: true } });
-    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-    await new Promise(r => setTimeout(r, 600));
-    const pdfData = await win.webContents.printToPDF({
-      printBackground: true,
-      pageSize: 'A4'
-      // No margins — Electron's default margins are fine; explicit values cause errors in some versions
-    });
-    win.destroy();
-
-    const fs = require('fs');
-    fs.writeFileSync(filePath, pdfData);
-    return { ok: true, filePath };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
-});
-
-// ─── Excel Export (pure Node.js ZIP, no external tools) ───────────────────────
-ipcMain.handle('excel:export', async (_, { sheets, filename }) => {
-  try {
-    const { dialog } = require('electron');
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: filename,
-      filters: [{ name: 'CSV para Excel', extensions: ['csv'] }]
-    });
-    if (!filePath) return { ok: false, cancelled: true };
-
-    // Export as CSV (opens perfectly in Excel, no zip needed)
-    const fs = require('fs');
-    const sheet = sheets[0];
-    const esc = v => {
-      const s = String(v === null || v === undefined ? '' : v);
-      return (s.includes(',') || s.includes('"') || s.includes('\n'))
-        ? '"' + s.replace(/"/g, '""') + '"' : s;
-    };
-    // sep=; tells Excel (Spanish locale) to use semicolon as delimiter
-    const csv = 'sep=;\r\n' + sheet.rows.map(row => row.map(esc).join(';')).join('\r\n');
-    // BOM so Excel reads UTF-8 with accents correctly
-    fs.writeFileSync(filePath, '\uFEFF' + csv, 'utf8');
-    return { ok: true, filePath };
-  } catch(e) {
-    return { ok: false, error: e.message };
-  }
 });
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────────────

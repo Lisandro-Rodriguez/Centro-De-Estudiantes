@@ -10,11 +10,16 @@ const Router = {
     alumnos:       () => Pages.alumnos(),
     personal:      () => Pages.personal(),
     materiales:    () => Pages.materiales(),
+    mercaderia:    () => Pages.mercaderia(),
+    informes:      () => Pages.informes(),
     configuracion: () => Pages.configuracion(),
   },
 
   navigate(page) {
     console.log('[Router] navigate ->', page);
+    // Reset PIN confirmation when leaving configuracion
+    if (App.currentPage === 'configuracion' && page !== 'configuracion') { App._pinConfirmado = false; }
+    if (App.currentPage === 'informes' && page !== 'informes') { App._pinInformes = false; }
     App.currentPage = page;
 
     document.querySelectorAll('.nav-item').forEach(el => {
