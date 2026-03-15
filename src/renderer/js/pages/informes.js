@@ -135,16 +135,19 @@ const Informes = {
     return App.config?.nombre_centro || 'Centro de Estudiantes';
   },
 
+  _exportando: false,
+
   async exportar(tipo, formato) {
+    if (this._exportando) return;
     const { desde, hasta } = this.getPeriodo();
     if (!desde || !hasta) { UI.toast('Seleccioná un período', 'error'); return; }
+    if (desde > hasta) { UI.toast('La fecha de inicio no puede ser mayor al final', 'error'); return; }
 
+    this._exportando = true;
     UI.toast('Generando informe...', 'info');
 
     try {
       const datos = await this.obtenerDatos(tipo, desde, hasta);
-      const fecha = `${desde}_${hasta}`;
-
       if (formato === 'pdf') {
         await this.exportarPDF(tipo, datos, desde, hasta);
       } else {
@@ -153,6 +156,8 @@ const Informes = {
     } catch(e) {
       UI.toast('Error al generar el informe: ' + e.message, 'error');
       console.error(e);
+    } finally {
+      this._exportando = false;
     }
   },
 

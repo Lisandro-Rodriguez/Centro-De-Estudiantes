@@ -690,3 +690,60 @@ tbody td {
   object-fit: cover;
   border-radius: calc(var(--radius) - 1px);
 }
+
+/* ─── Nav grupos colapsables ─────────────────────────────────────────────── */
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  margin: 4px 0 2px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius);
+  transition: background .15s;
+}
+.nav-group-header:hover { background: var(--bg-hover); }
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex: 1;
+}
+.nav-group-arrow {
+  font-size: 9px;
+  color: var(--text-muted);
+  transition: transform .2s;
+}
+.nav-group-arrow.open { transform: rotate(90deg); }
+.nav-group-body {
+  overflow: hidden;
+  transition: max-height .25s ease;
+}
+.nav-group-body .nav-item {
+  padding-left: 22px;
+}
+/* Tabs dentro de páginas */
+.page-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 24px;
+}
+.page-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+  margin-bottom: -1px;
+}
+.page-tab:hover { color: var(--text-primary); }
+.page-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}

@@ -11,26 +11,40 @@ const UI = {
 
   modal(html, onClose) {
     const overlay = document.getElementById('modal-overlay');
-    const box = document.getElementById('modal-box');
+
+    // Replace modal-box entirely to kill ALL previous event listeners
+    const oldBox = document.getElementById('modal-box');
+    const box = oldBox.cloneNode(false); // empty clone, no listeners
+    oldBox.parentNode.replaceChild(box, oldBox);
+
     box.innerHTML = html;
     overlay.style.display = 'flex';
 
+    let closed = false;
     const close = () => {
+      if (closed) return;
+      closed = true;
       overlay.style.display = 'none';
       box.innerHTML = '';
+      overlay.onclick = null;
       if (onClose) onClose();
     };
 
     overlay.onclick = (e) => { if (e.target === overlay) close(); };
-    const closeBtn = box.querySelector('.modal-close');
-    if (closeBtn) closeBtn.onclick = close;
+    box.querySelectorAll('.modal-close').forEach(btn => {
+      btn.addEventListener('click', close, { once: true });
+    });
 
     return close;
   },
 
   closeModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
-    document.getElementById('modal-box').innerHTML = '';
+    const overlay = document.getElementById('modal-overlay');
+    const oldBox  = document.getElementById('modal-box');
+    overlay.style.display = 'none';
+    const box = oldBox.cloneNode(false);
+    oldBox.parentNode.replaceChild(box, oldBox);
+    overlay.onclick = null;
   },
 
   confirm(title, msg, onConfirm) {

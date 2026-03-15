@@ -1,5 +1,32 @@
-﻿node_modules/
+# Dependencias
+node_modules/
+
+# Build
 dist/
+dist-unpacked/
+*.rar
+
+# Base de datos local (nunca commitear datos reales)
 *.db
 *.db-journal
-.env
+*.db.tmp
+*.bin
+.appdata/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos temporales del proyecto
+proyecto-src.zip

@@ -20,6 +20,7 @@
       <span class="titlebar-icon">◈</span>
       <span id="titlebar-name">Centro de Estudiantes</span>
     </div>
+    <div id="titlebar-clock" style="position:absolute;right:160px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.04em;-webkit-app-region:no-drag;"></div>
     <div class="titlebar-controls">
       <button class="tb-btn" id="btn-min">─</button>
       <button class="tb-btn" id="btn-max">□</button>
@@ -50,20 +51,35 @@
       </div>
 
       <ul class="nav-list" style="flex:1;">
-        <li class="nav-item active" data-page="dashboard">  <span class="nav-icon">🏠</span><span class="nav-text">Inicio</span></li>
-        <li class="nav-item" data-page="turno">             <span class="nav-icon">🕐</span><span class="nav-text">Turno Actual</span></li>
-        <li class="nav-item" data-page="agenda">            <span class="nav-icon">📅</span><span class="nav-text">Agenda</span></li>
-        <li class="nav-item" data-page="prestamos">         <span class="nav-icon">📦</span><span class="nav-text">Préstamos</span></li>
-        <li class="nav-item" data-page="pan">               <span class="nav-icon">🥐</span><span class="nav-text">Desayuno / Merienda</span></li>
-        <li class="nav-item" data-page="hojas">             <span class="nav-icon">📄</span><span class="nav-text">Fotocopias</span></li>
+        <!-- Siempre visibles -->
+        <li class="nav-item active" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-text">Inicio</span></li>
+        <li class="nav-item" data-page="turno"><span class="nav-icon">🕐</span><span class="nav-text">Turno</span></li>
+        <li class="nav-item" data-page="agenda"><span class="nav-icon">📅</span><span class="nav-text">Agenda</span></li>
+
+        <!-- Grupo: Servicios -->
+        <li class="nav-group-header" onclick="NavGroups.toggle('servicios')">
+          <span class="nav-group-label">Servicios</span>
+          <span class="nav-group-arrow" id="arrow-servicios">▶</span>
+        </li>
+        <ul class="nav-group-body" id="group-servicios" style="max-height:0;">
+          <li class="nav-item" data-page="prestamos"><span class="nav-icon">📦</span><span class="nav-text">Préstamos</span></li>
+          <li class="nav-item" data-page="pan"><span class="nav-icon">🥐</span><span class="nav-text">Desayuno / Merienda</span></li>
+          <li class="nav-item" data-page="hojas"><span class="nav-icon">📄</span><span class="nav-text">Fotocopias</span></li>
+        </ul>
+
+        <!-- Grupo: Gestión -->
+        <li class="nav-group-header" onclick="NavGroups.toggle('gestion')">
+          <span class="nav-group-label">Gestión</span>
+          <span class="nav-group-arrow" id="arrow-gestion">▶</span>
+        </li>
+        <ul class="nav-group-body" id="group-gestion" style="max-height:0;">
+          <li class="nav-item" data-page="gente"><span class="nav-icon">👥</span><span class="nav-text">Gente</span></li>
+          <li class="nav-item" data-page="inventario"><span class="nav-icon">🎒</span><span class="nav-text">Inventario</span></li>
+        </ul>
+
         <li class="nav-divider"></li>
-        <li class="nav-item" data-page="alumnos">           <span class="nav-icon">🎓</span><span class="nav-text">Alumnos</span></li>
-        <li class="nav-item" data-page="personal">          <span class="nav-icon">👥</span><span class="nav-text">Personal</span></li>
-        <li class="nav-item" data-page="materiales">        <span class="nav-icon">🎒</span><span class="nav-text">Materiales</span></li>
-        <li class="nav-item" data-page="mercaderia">        <span class="nav-icon">🧉</span><span class="nav-text">Mercadería</span></li>
-        <li class="nav-divider"></li>
-        <li class="nav-item" data-page="informes">          <span class="nav-icon">📊</span><span class="nav-text">Informes</span></li>
-        <li class="nav-item" data-page="configuracion">     <span class="nav-icon">⚙️</span><span class="nav-text">Configuración</span></li>
+        <li class="nav-item" data-page="informes"><span class="nav-icon">📊</span><span class="nav-text">Informes</span></li>
+        <li class="nav-item" data-page="configuracion"><span class="nav-icon">⚙️</span><span class="nav-text">Configuración</span></li>
       </ul>
 
       <!-- Usuario activo -->
@@ -94,6 +110,26 @@
   <script src="js/inventario.js"></script>
   <script src="js/morosos.js"></script>
   <script src="js/temas.js"></script>
+  <script src="js/pages/historial.js"></script>
+  <script src="js/pages/gente.js"></script>
+  <script src="js/pages/inventario.js"></script>
+  <script src="js/navgroups.js"></script>
+  <script src="js/automatico.js"></script>
+  <script>
+    // Reloj en tiempo real en la titlebar
+    function _tickClock() {
+      const el = document.getElementById('titlebar-clock');
+      if (!el) return;
+      const now = new Date();
+      const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      el.textContent = `${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]}  ${hh}:${mm}`;
+    }
+    _tickClock();
+    setInterval(_tickClock, 10000); // actualiza cada 10 seg
+  </script>
   <script src="js/router.js"></script>
   <script src="js/app.js"></script>
 </body>

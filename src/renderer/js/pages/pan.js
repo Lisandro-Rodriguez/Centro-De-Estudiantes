@@ -51,7 +51,7 @@ Pages.pan = async function() {
     ${UI.turnoActivoBanner()}
     <div class="page-header">
       <div>
-        <h1 class="page-title">Desayuno / Merienda / Merienda</h1>
+        <h1 class="page-title">Desayuno / Merienda</h1>
         <div class="page-subtitle">1 pan por alumno por turno · ${new Date().toLocaleDateString('es-AR')}</div>
       </div>
     </div>

@@ -1,93 +1,43 @@
-# Centro de Estudiantes — Sistema de Gestión
+# Sistema de Gestión — Centro de Estudiantes
 
-Sistema de escritorio para centros de estudiantes.
-Electron + **sql.js** (SQLite puro JS, sin compilación) — funciona 100% offline.
+Sistema de escritorio offline para la gestión integral de un Centro de Estudiantes universitario.
 
----
+## Stack
 
-## Requisitos
-
-- **Node.js 18 o superior**: https://nodejs.org  
-  ⚠️ Instalar la versión **LTS** (no la "Current")
-- No se necesita Python, Visual C++, ni nada extra
-
----
-
-## Instalación
-
-```bash
-# Estás en la carpeta Centro-De-Estudiantes (donde está package.json)
-# NO hacer cd centro-estudiantes — ya estás en el lugar correcto
-
-npm install
-npm start
-```
-
-Si todo va bien, la app abre directamente.
-
----
-
-## Si Node.js es muy nuevo (v22+) y hay problemas
-
-```bash
-# Opción A: usar la versión LTS de Node.js (recomendado)
-# Descargar de https://nodejs.org la versión 20 LTS
-
-# Opción B: forzar compatibilidad
-npm install --legacy-peer-deps
-npm start
-```
-
----
-
-## Generar instalador .exe
-
-```bash
-npm run build:local
-# El instalador queda en la carpeta: dist/
-```
-
----
-
-## Configurar actualizaciones automáticas vía GitHub
-
-1. Crear repo en GitHub
-2. Editar `package.json` → `build.publish` → poner tu usuario y nombre de repo
-3. Crear token en GitHub: Settings → Developer settings → Personal access tokens (permisos: `repo`)
-4. En PowerShell antes de buildear:
-   ```powershell
-   $env:GH_TOKEN="tu_token_aqui"
-   npm run build
-   ```
-5. Cada nueva versión: actualizar `"version"` en `package.json`, luego `npm run build`
-
-El programa **chequea actualizaciones al iniciar** y cada 2 horas.
-Cuando detecta una nueva versión, muestra un banner y el usuario instala con un clic.
-
----
-
-## Dónde se guarda la base de datos
-
-```
-Windows: C:\Users\TU_USUARIO\AppData\Roaming\centro-estudiantes\centro.db
-```
-
-Para **backup**: copiar ese archivo `.db`.  
-Para **migrar a otra PC**: copiar el `.db` a la misma ruta.
-
----
+- **Electron** — app de escritorio multiplataforma
+- **sql.js** — SQLite corriendo en memoria, persistido en disco localmente
+- **HTML/CSS/JS vanilla** — sin frameworks
 
 ## Módulos
 
-| Módulo | Función |
-|--------|---------|
-| Dashboard | Resumen del día — stats, agenda, préstamos activos |
-| Turno actual | Iniciar/cerrar turno, registrar personal, calcular horas |
-| Agenda | Vista semanal de turnos programados |
-| Préstamos | Prestar y devolver materiales con control de stock |
-| Pan / Merienda | 1 pan por alumno, detecta duplicados automáticamente |
-| Hojas | 3 gratis + hasta 7 pagas, precio y desglose en tiempo real |
-| Alumnos | ABM con búsqueda por nombre y DNI |
-| Personal | Becarios y directivos + control de horas de beca |
-| Materiales | Inventario de materiales prestables |
-| Configuración | Nombre del centro, límites de hojas, precio por hoja |
+- **Turnos** — gestión de turnos con sesiones duales (hasta 2 usuarios simultáneos), estados automáticos y reemplazos
+- **Préstamos** — préstamos de materiales con control de morosos, incumplimientos y bloqueos por cuatrimestre
+- **Desayuno / Merienda** — registro con límite diario por alumno
+- **Fotocopias** — cuota gratuita + excedente pago configurable
+- **Inventario** — materiales para préstamo + mercadería con movimientos de stock
+- **Gente** — alumnos y personal con carreras y roles
+- **Agenda** — turnos programados con notificaciones desktop
+- **Informes** — exportación a PDF y CSV/Excel
+- **Configuración** — parámetros del sistema, carreras, PIN admin, backups
+
+## Desarrollo
+
+```bash
+npm install
+npm run dev
+```
+
+## Build (Windows)
+
+```bash
+npm run build:local   # genera instalador sin publicar
+npm run build         # genera y publica en GitHub Releases
+```
+
+Requiere configurar `owner` y `repo` en `package.json` antes de publicar.
+
+## Base de datos
+
+La base de datos se guarda localmente en `%AppData%/centro-estudiantes/.appdata/store.bin`.  
+Los backups automáticos diarios se almacenan en `.appdata/bk/` (últimos 7 días).  
+El archivo queda protegido en solo lectura cuando la app está cerrada.

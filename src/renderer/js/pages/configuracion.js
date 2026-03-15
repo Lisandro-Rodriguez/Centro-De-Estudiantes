@@ -401,16 +401,11 @@ Pages.materiales = async function() {
 
 // ─── Configuración ────────────────────────────────────────────────────────────
 Pages.configuracion = async function() {
-  // Requiere PIN admin
   if (!App._pinConfirmado) {
-    App.pedirPinAdmin(() => {
-      App._pinConfirmado = true;
-      Router.navigate('configuracion');
-    });
+    App.pedirPinAdmin(() => { App._pinConfirmado = true; Pages.configuracion(); });
     return;
   }
   const container = document.getElementById('page-container');
-
   const conf = {
     nombre_centro: await window.api.getConfig('nombre_centro'),
     hojas_gratis:  await window.api.getConfig('hojas_gratis'),
@@ -419,145 +414,175 @@ Pages.configuracion = async function() {
   };
 
   async function recargarCarreras() {
-    const carreras = await DB.query(`SELECT * FROM carreras ORDER BY nombre`);
+    const carreras = await DB.query('SELECT * FROM carreras ORDER BY nombre');
     document.getElementById('lista-carreras').innerHTML = carreras.length === 0
-      ? `<div class="text-muted fs-12" style="padding:8px 0;">Sin carreras cargadas</div>`
-      : carreras.map(c => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border-light);">
-            <div>
-              <span class="badge badge-blue" style="margin-right:8px;">${c.siglas || '—'}</span>
-              <span style="font-size:13px;">${c.nombre}</span>
-            </div>
-            <button class="btn btn-sm btn-danger btn-icon" onclick="Pages._deleteCarrera(${c.id}, '${c.nombre}')">✕</button>
-          </div>
-        `).join('');
+      ? '<div class="text-muted fs-12" style="padding:8px 0;">Sin carreras cargadas</div>'
+      : carreras.map(c => `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border-light);"><div><span class="badge badge-blue" style="margin-right:8px;">${c.siglas||'—'}</span><span style="font-size:13px;">${c.nombre}</span></div><button class="btn btn-sm btn-danger btn-icon" onclick="Pages._deleteCarrera(${c.id},'${c.nombre}')">✕</button></div>`).join('');
+  }
+
+  async function recargarBackups() {
+    const el = document.getElementById('lista-backups');
+    if (!el) return;
+    const res = await window.api.listarBackups();
+    const lista = res.ok ? res.data : [];
+    if (!lista.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Sin backups automáticos todavía</div>';
+      return;
+    }
+    el.innerHTML = lista.map(b => `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-light);"><div><span style="font-size:13px;font-family:var(--font-mono);">${b.fecha}</span><span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${(b.tamano/1024).toFixed(0)} KB</span></div><span class="badge badge-green" style="font-size:10px;">✓ automático</span></div>`).join('');
   }
 
   container.innerHTML = `
     <div class="page-header">
-      <div>
-        <h1 class="page-title">Configuración</h1>
-        <div class="page-subtitle">Parámetros generales del sistema</div>
-      </div>
+      <div><h1 class="page-title">Configuración</h1><div class="page-subtitle">Parámetros generales del sistema</div></div>
     </div>
-
     <div class="grid-2" style="max-width:1000px;">
       <div>
         <div class="card" style="margin-bottom:16px;">
           <div class="card-title">General</div>
-          <div class="form-group">
-            <label>Nombre del centro</label>
-            <input type="text" id="cf-nombre" value="${conf.nombre_centro || ''}" />
-          </div>
-          <div class="form-group">
-            <label>PIN administrador</label>
-            <input type="password" id="cf-pin" value="${await window.api.getConfig('pin_admin') || '1234'}" maxlength="8" style="letter-spacing:4px;font-family:var(--font-mono);" />
+          <div class="form-group"><label>Nombre del centro</label><input type="text" id="cf-nombre" value="${conf.nombre_centro||''}" /></div>
+          <div class="form-group"><label>PIN administrador</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="password" placeholder="••••••••" disabled style="letter-spacing:4px;font-family:var(--font-mono);flex:1;opacity:0.6;" />
+              <button class="btn btn-secondary btn-sm" id="btn-cambiar-pin">Cambiar PIN</button>
+            </div>
           </div>
         </div>
-
         <div class="card" style="margin-bottom:16px;">
           <div class="card-title">Hojas</div>
           <div class="form-grid form-grid-3">
-            <div class="form-group">
-              <label>Gratis / día</label>
-              <input type="number" id="cf-hgratis" value="${conf.hojas_gratis || 3}" min="0" max="20" />
-            </div>
-            <div class="form-group">
-              <label>Máx. pagas / día</label>
-              <input type="number" id="cf-hmax" value="${conf.hojas_max || 7}" min="0" max="30" />
-            </div>
-            <div class="form-group">
-              <label>Precio / hoja ($)</label>
-              <input type="number" id="cf-precio" value="${conf.precio_hoja || 0}" min="0" step="0.5" />
-            </div>
+            <div class="form-group"><label>Gratis / día</label><input type="number" id="cf-hgratis" value="${conf.hojas_gratis||3}" min="0" max="20" /></div>
+            <div class="form-group"><label>Máx. pagas / día</label><input type="number" id="cf-hmax" value="${conf.hojas_max||7}" min="0" max="30" /></div>
+            <div class="form-group"><label>Precio / hoja ($)</label><input type="number" id="cf-precio" value="${conf.precio_hoja||0}" min="0" step="0.5" /></div>
           </div>
         </div>
-
-        <button class="btn btn-primary" id="btn-guardar-conf">◈ Guardar configuración</button>
-
-        <div class="card" style="margin-top:20px;">
+        <button class="btn btn-primary" id="btn-guardar-conf" style="width:100%;margin-bottom:16px;">◈ Guardar configuración</button>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">🗄 Copias de seguridad</div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">La app guarda una copia automática al iniciar cada día (últimas 7). También podés hacer una manual en cualquier momento.</p>
+          <button class="btn btn-secondary" id="btn-backup-manual" style="width:100%;margin-bottom:14px;">💾 Guardar copia de seguridad ahora</button>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;font-weight:500;">Últimas copias automáticas:</div>
+          <div id="lista-backups"><div style="font-size:12px;color:var(--text-muted);">Cargando...</div></div>
+        </div>
+        <div class="card">
           <div class="card-title">Información del sistema</div>
           <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);line-height:2;">
             <div>Versión: <span class="text-accent">1.0.0</span></div>
-            <div>Base de datos: <span class="text-green">SQLite · local</span></div>
+            <div>Base de datos: <span class="text-green">SQLite · local · protegida</span></div>
             <div>Actualizaciones: <span class="text-accent">automáticas via GitHub</span></div>
           </div>
         </div>
       </div>
-
       <div>
         <div class="card">
           <div class="card-title">Carreras</div>
-          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">
-            Completá el nombre completo y las siglas. Las siglas se mostrarán en tablas y listados.
-          </p>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Completá el nombre completo y las siglas. Se muestran en tablas y listados.</p>
           <div class="form-grid form-grid-2" style="margin-bottom:10px;">
-            <div class="form-group">
-              <label>Nombre completo</label>
-              <input type="text" id="nueva-carrera-nombre" placeholder="Ej: Ingeniería en Sistemas" />
-            </div>
-            <div class="form-group">
-              <label>Siglas</label>
-              <input type="text" id="nueva-carrera-siglas" placeholder="Ej: ISI" style="text-transform:uppercase;" />
-            </div>
+            <div class="form-group"><label>Nombre completo</label><input type="text" id="nueva-carrera-nombre" placeholder="Ej: Ingeniería en Sistemas" /></div>
+            <div class="form-group"><label>Siglas</label><input type="text" id="nueva-carrera-siglas" placeholder="Ej: ISI" style="text-transform:uppercase;" /></div>
           </div>
           <button class="btn btn-primary" id="btn-agregar-carrera" style="width:100%;margin-bottom:16px;">+ Agregar carrera</button>
-          <div id="lista-carreras">
-            <div class="text-muted fs-12">Cargando...</div>
-          </div>
+          <div id="lista-carreras"><div class="text-muted fs-12">Cargando...</div></div>
         </div>
       </div>
     </div>
   `;
 
   await recargarCarreras();
+  await recargarBackups();
 
-  document.getElementById('btn-guardar-conf').onclick = async () => {
+  document.getElementById('btn-guardar-conf').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-guardar-conf');
+    btn.disabled = true;
     const updates = {
       nombre_centro: document.getElementById('cf-nombre').value.trim(),
       hojas_gratis:  document.getElementById('cf-hgratis').value,
       hojas_max:     document.getElementById('cf-hmax').value,
       precio_hoja:   document.getElementById('cf-precio').value,
-      pin_admin:     document.getElementById('cf-pin').value || '1234',
     };
-    for (const [k, v] of Object.entries(updates)) {
-      await window.api.setConfig(k, v);
-      App.config[k] = v;
-    }
+    for (const [k, v] of Object.entries(updates)) { await window.api.setConfig(k, v); App.config[k] = v; }
     document.getElementById('titlebar-name').textContent = updates.nombre_centro || 'Centro de Estudiantes';
-    App.config.pin_admin = updates.pin_admin;
-    UI.toast('Configuración guardada', 'success');
-  };
+    UI.toast('Configuración guardada ✓', 'success');
+    btn.disabled = false;
+  });
 
-  document.getElementById('btn-agregar-carrera').onclick = async () => {
+  document.getElementById('btn-backup-manual').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-backup-manual');
+    btn.disabled = true;
+    btn.textContent = '💾 Guardando...';
+    const res = await window.api.crearBackup();
+    if (res.ok) { UI.toast('Copia guardada correctamente', 'success'); await recargarBackups(); }
+    else if (!res.cancelled) UI.toast('Error: ' + (res.error||''), 'error');
+    btn.disabled = false;
+    btn.textContent = '💾 Guardar copia de seguridad ahora';
+  });
+
+  document.getElementById('btn-cambiar-pin').addEventListener('click', () => {
+    const cerrar = UI.modal(`
+      <div class="modal-header"><h3 class="modal-title">🔒 Cambiar PIN</h3><button class="modal-close">✕</button></div>
+      <div class="form-grid">
+        <div class="form-group"><label>PIN actual</label>
+          <input type="password" id="pin-actual" maxlength="8" style="letter-spacing:4px;font-family:var(--font-mono);text-align:center;" /></div>
+        <div class="form-group"><label>PIN nuevo (mínimo 4 dígitos)</label>
+          <input type="password" id="pin-nuevo" maxlength="8" style="letter-spacing:4px;font-family:var(--font-mono);text-align:center;" /></div>
+        <div class="form-group"><label>Confirmar PIN nuevo</label>
+          <input type="password" id="pin-confirmar" maxlength="8" style="letter-spacing:4px;font-family:var(--font-mono);text-align:center;" /></div>
+        <div id="pin-cambio-error" style="color:var(--red);font-size:12px;display:none;"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" id="btn-pin-cancelar2">Cancelar</button>
+        <button class="btn btn-primary" id="btn-pin-guardar">Guardar PIN</button>
+      </div>`);
+    document.getElementById('btn-pin-cancelar2').addEventListener('click', cerrar, { once: true });
+    let guardando = false;
+    document.getElementById('btn-pin-guardar').addEventListener('click', async () => {
+      if (guardando) return;
+      const actual = document.getElementById('pin-actual').value;
+      const nuevo = document.getElementById('pin-nuevo').value;
+      const confirmar = document.getElementById('pin-confirmar').value;
+      const errEl = document.getElementById('pin-cambio-error');
+      if (nuevo !== confirmar) { errEl.textContent = 'Los PINs nuevos no coinciden'; errEl.style.display = 'block'; return; }
+      if (nuevo.length < 4)   { errEl.textContent = 'El PIN debe tener al menos 4 dígitos'; errEl.style.display = 'block'; return; }
+      guardando = true;
+      const res = await window.api.cambiarPin(actual, nuevo);
+      if (res.ok) { cerrar(); UI.toast('PIN actualizado correctamente', 'success'); }
+      else {
+        errEl.textContent = res.error || 'PIN actual incorrecto';
+        errEl.style.display = 'block';
+        document.getElementById('pin-actual').value = '';
+        document.getElementById('pin-actual').focus();
+        guardando = false;
+      }
+    });
+    setTimeout(() => document.getElementById('pin-actual')?.focus(), 80);
+  });
+
+  document.getElementById('btn-agregar-carrera').addEventListener('click', async () => {
     const nombre = document.getElementById('nueva-carrera-nombre').value.trim();
     const siglas = document.getElementById('nueva-carrera-siglas').value.trim().toUpperCase();
     if (!nombre) { UI.toast('Ingresá el nombre de la carrera', 'error'); return; }
     if (!siglas) { UI.toast('Ingresá las siglas', 'error'); return; }
-    const existe = await DB.get(`SELECT id FROM carreras WHERE nombre=? OR siglas=?`, nombre, siglas);
+    const existe = await DB.get('SELECT id FROM carreras WHERE nombre=? OR siglas=?', nombre, siglas);
     if (existe) { UI.toast('Ya existe una carrera con ese nombre o siglas', 'error'); return; }
-    await DB.run(`INSERT INTO carreras (nombre, siglas) VALUES (?,?)`, nombre, siglas);
+    await DB.run('INSERT INTO carreras (nombre, siglas) VALUES (?,?)', nombre, siglas);
     document.getElementById('nueva-carrera-nombre').value = '';
     document.getElementById('nueva-carrera-siglas').value = '';
-    UI.toast(`Carrera "${siglas}" agregada`, 'success');
+    UI.toast(`Carrera agregada`, 'success');
     recargarCarreras();
-  };
+  });
 
-  // Enter en cualquiera de los campos agrega
-  ['nueva-carrera-nombre', 'nueva-carrera-siglas'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', e => {
+  ['nueva-carrera-nombre','nueva-carrera-siglas'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('btn-agregar-carrera').click();
     });
   });
-
-  // Auto-uppercase siglas mientras se escribe
   document.getElementById('nueva-carrera-siglas').addEventListener('input', function() {
     this.value = this.value.toUpperCase();
   });
 
   Pages._deleteCarrera = (id, nombre) => {
-    UI.confirm('Eliminar carrera', `¿Eliminar "${nombre}"? Los alumnos y personal con esta carrera mantendrán sus siglas registradas.`, async () => {
-      await DB.run(`DELETE FROM carreras WHERE id=?`, id);
+    UI.confirm('Eliminar carrera', `Eliminar esta carrera? Los alumnos mantienen sus siglas registradas.`, async () => {
+      await DB.run('DELETE FROM carreras WHERE id=?', id);
       UI.toast('Carrera eliminada', 'info');
       recargarCarreras();
     });

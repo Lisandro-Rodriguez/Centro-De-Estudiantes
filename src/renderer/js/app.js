@@ -6,7 +6,7 @@ const App = {
   usuarioActivo: null,  // { id, nombre, apellido, rol }
 
   async init() {
-    const keys = ['hojas_gratis', 'hojas_max', 'precio_hoja', 'nombre_centro', 'pin_admin'];
+    const keys = ['hojas_gratis', 'hojas_max', 'precio_hoja', 'nombre_centro'];
     for (const k of keys) {
       this.config[k] = await window.api.getConfig(k);
     }
@@ -23,6 +23,9 @@ const App = {
 
     // Inicializar temas y logo
     await Temas.init();
+
+    // Inicializar sistema automático (estados + recordatorios)
+    Automatico.init();
 
     document.getElementById('btn-min').onclick   = () => window.api.minimize();
     document.getElementById('btn-max').onclick   = () => window.api.maximize();
@@ -224,51 +227,49 @@ const App = {
   },
 
   // ── PIN Admin ──────────────────────────────────────────────────────────────
-  // Pide el PIN y ejecuta el callback si es correcto
+  // FIX: la verificación ocurre en el proceso principal via IPC.
+  // El renderer NUNCA recibe ni almacena el valor real del PIN.
   pedirPinAdmin(onSuccess) {
-    // Evitar abrir el modal dos veces si ya está abierto
     if (this._pinModalAbierto) return;
     this._pinModalAbierto = true;
-    const pin = this.config.pin_admin || '1234';
-    UI.modal(`
+
+    const cerrar = UI.modal(`
       <div class="modal-header">
         <h3 class="modal-title">🔒 Acceso administrador</h3>
         <button class="modal-close">✕</button>
       </div>
       <div style="text-align:center;padding:8px 0 16px;">
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Ingresá el PIN del centro para continuar</div>
-        <input type="password" id="pin-input" maxlength="8" placeholder="PIN" autofocus
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Ingresá el PIN para continuar</div>
+        <input type="password" id="pin-input" maxlength="8" placeholder="PIN"
           style="text-align:center;font-size:24px;font-family:var(--font-mono);letter-spacing:8px;width:140px;padding:10px;" />
         <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none;">PIN incorrecto</div>
       </div>
       <div class="form-actions">
-        <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
-        <button class="btn btn-primary" id="btn-confirmar-pin">Confirmar</button>
+        <button class="btn btn-secondary" id="btn-pin-cancelar">Cancelar</button>
+        <button class="btn btn-primary"   id="btn-confirmar-pin">Confirmar</button>
       </div>
-    `);
+    `, () => { this._pinModalAbierto = false; });
 
-    const confirmar = () => {
-      const ingresado = document.getElementById('pin-input').value;
-      if (ingresado === pin) {
+    const confirmar = async () => {
+      const ingresado = document.getElementById('pin-input')?.value || '';
+      // Verificación en proceso principal — renderer no compara contra nada local
+      const res = await window.api.verificarPin(ingresado);
+      if (res.ok) {
         this._pinModalAbierto = false;
-        UI.closeModal();
+        cerrar();
         onSuccess();
       } else {
-        document.getElementById('pin-error').style.display = 'block';
-        document.getElementById('pin-input').value = '';
-        document.getElementById('pin-input').focus();
+        const err = document.getElementById('pin-error');
+        if (err) err.style.display = 'block';
+        const inp = document.getElementById('pin-input');
+        if (inp) { inp.value = ''; inp.focus(); }
       }
     };
 
+    document.getElementById('btn-pin-cancelar').onclick  = () => { this._pinModalAbierto = false; cerrar(); };
     document.getElementById('btn-confirmar-pin').onclick = confirmar;
-    document.getElementById('pin-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') confirmar();
-    });
-    // Reset flag if user closes modal manually
-    document.querySelector('.modal-close').addEventListener('click', () => {
-      this._pinModalAbierto = false;
-    });
-    setTimeout(() => document.getElementById('pin-input')?.focus(), 100);
+    document.getElementById('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') confirmar(); });
+    setTimeout(() => document.getElementById('pin-input')?.focus(), 80);
   },
 
   // ── Turno (solo para horas, desacoplado del rol) ───────────────────────────
